@@ -4,7 +4,7 @@ const request = require( 'request' )
 const cheerio = require( 'cheerio' )
 
 let searchOptions = {
-    base: 'http://new-ru.org/search/',
+    base: 'http://cool-tor.org/search/',
     page: 0,
     category: 0,
     method: 100,
