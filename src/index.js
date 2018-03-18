@@ -1,58 +1,97 @@
-'use strict'
+'use strict';
 
-const request = require( 'request' )
-const cheerio = require( 'cheerio' )
+const FILE_CONF = __dirname + '/../config.json';
 
-let searchOptions = {
-    base: 'http://cool-tor.org/search/',
+var request = require('request');
+var cheerio = require('cheerio');
+var conf = require(FILE_CONF);
+const fs = require("fs");
+
+// cool-tor.org
+const HOST = 'http://' + conf.host;
+
+var searchOptions = {
+    base: HOST + '/search/',
     page: 0,
     category: 0,
     method: 100,
     order: 0
-}
+};
 
-exports.config = ( newOptions ) =>
-    searchOptions = Object.assign( {}, searchOptions, newOptions )
+exports.config = function (newOptions) {
+    return searchOptions = Object.assign({}, searchOptions, newOptions);
+};
 
-exports.search = ( needle ) =>
-    fetch( getFullUrl( needle ) )
-        .then( parse )
+exports.search = function (needle) {
+    return fetch(getFullUrl(needle)).then(parse);
+};
 
-const fetch = ( url ) =>
-    new Promise( ( resolve, reject ) =>
-        request( url, ( err, res, body ) => {
-            if ( err ) reject( err )
-            if ( res.statusCode !== 200 ) reject( new Error( `Unsafe status code (${ res.statusCode }) when making request` ) )
-            resolve( body )
-        } )
-    )
+var fetch = function fetch(url)
+{
+    return new Promise(function (resolve, reject) {
 
-const getBaseUrl = () => {
-    const { page, category, method, order } = searchOptions
-    if ( !page && !category && !method && !order ) return searchOptions.base
-    return searchOptions.base + `${ page }/${ category }/${ method }/${ order }/`
-}
+        return request(url, function (err, res, body) {
 
-const getFullUrl = ( needle ) =>
-    getBaseUrl() + encodeURIComponent( needle )
+            if(conf.host !== res.request.host)
+            {
+                conf.host = res.request.host;
 
-const parse = function( html ) {
-    let $ = cheerio.load( html )
+                fs.writeFile(FILE_CONF, JSON.stringify(conf), (error) => {
+                    // console.log(error)
+                });
+            }
 
-    return $( '#index' ).find( 'tr:not(.backgr)' ).map( ( i, elem ) => {
-        const $td = $( elem ).find( 'td' )
-        const $links = $( $td[1] ).find( 'a' )
-        const $peers = $( $td[ $td.length - 1 ] )
+            if (err) {
+                reject(err);
+            }
+
+            if (res.statusCode !== 200) {
+                reject(new Error('Unsafe status code (' + res.statusCode + ') when making request'));
+            }
+
+            resolve(body);
+
+        });
+
+    });
+};
+
+var getBaseUrl = function getBaseUrl() {
+    var _searchOptions = searchOptions,
+        page = _searchOptions.page,
+        category = _searchOptions.category,
+        method = _searchOptions.method,
+        order = _searchOptions.order;
+
+    if (!page && !category && !method && !order) return searchOptions.base;
+    return searchOptions.base + (page + '/' + category + '/' + method + '/' + order + '/');
+};
+
+var getFullUrl = function getFullUrl(needle) {
+    return getBaseUrl() + encodeURIComponent(needle);
+};
+
+var parse = function parse(html) {
+
+
+
+    var $ = cheerio.load(html);
+
+    return $('#index').find('tr:not(.backgr)').map(function (i, elem) {
+
+        var $td = $(elem).find('td');
+        var $links = $($td[1]).find('a');
+        var $peers = $($td[$td.length - 1]);
 
         return {
-            title: $( $links[ 2 ] ).text(),
-            date: $( $td[ 0 ] ).text(),
-            size: $( $td[ $td.length - 2 ] ).html().replace( '&#xA0;', ' ' ),
-            url: $( $links[ 2 ] ).attr( 'href' ),
-            magnet: $( $links[ 0 ] ).attr( 'href' ),
-            torrent: $( $links[ 1 ] ).attr( 'href' ),
-            seeds: parseInt( $peers.find( '.green' ).text() ),
-            leaches: parseInt( $peers.find( '.red' ).text() )
-        }
-    } ).get()
-}
+            title: $($links[2]).text().trim(),
+            date: $($td[0]).text().trim(),
+            size: $($td[$td.length - 2]).html().replace('&#xA0;', ' '),
+            url: HOST + $($links[2]).attr('href'),
+            magnet: $($links[0]).attr('href'),
+            torrent: $($links[1]).attr('href'),
+            seeds: parseInt($peers.find('.green').text().trim()),
+            leaches: parseInt($peers.find('.red').text().trim())
+        };
+    }).get();
+};
