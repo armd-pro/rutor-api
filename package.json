@@ -13,7 +13,6 @@
   "main": "lib/index.js",
   "dependencies": {
     "ava": "^0.17.0",
-    "cheerio": "^0.22.0",
     "request": "^2.79.0"
   },
   "devDependencies": {
@@ -33,7 +32,9 @@
     "node": ">=4"
   },
   "ava": {
-    "files": [ "src/*.test.js" ],
+    "files": [
+      "src/*.test.js"
+    ],
     "source": [
       "src/*.js",
       "!lib/**/*"

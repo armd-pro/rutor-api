@@ -3,11 +3,9 @@
 const FILE_CONF = __dirname + '/../config.json';
 
 var request = require('request');
-var cheerio = require('cheerio');
 var conf = require(FILE_CONF);
 const fs = require("fs");
 
-// cool-tor.org
 const HOST = 'http://' + conf.host;
 
 var searchOptions = {
@@ -23,14 +21,20 @@ exports.config = function (newOptions) {
 };
 
 exports.search = function (needle) {
-    return fetch(getFullUrl(needle)).then(parse);
+    return fetch(getFullUrl(needle)).then((searchResult) => {
+        return searchResult;
+    });
 };
 
 var fetch = function fetch(url)
 {
     return new Promise(function (resolve, reject) {
 
-        return request(url, function (err, res, body) {
+        return request({url: url, headers: {
+
+                'Content-Type': 'application/json'
+
+            }}, function (err, res, searchResult) {
 
             if(conf.host !== res.request.host)
             {
@@ -49,7 +53,7 @@ var fetch = function fetch(url)
                 reject(new Error('Unsafe status code (' + res.statusCode + ') when making request'));
             }
 
-            resolve(body);
+            resolve(JSON.parse(searchResult));
 
         });
 
@@ -71,27 +75,3 @@ var getFullUrl = function getFullUrl(needle) {
     return getBaseUrl() + encodeURIComponent(needle);
 };
 
-var parse = function parse(html) {
-
-
-
-    var $ = cheerio.load(html);
-
-    return $('#index').find('tr:not(.backgr)').map(function (i, elem) {
-
-        var $td = $(elem).find('td');
-        var $links = $($td[1]).find('a');
-        var $peers = $($td[$td.length - 1]);
-
-        return {
-            title: $($links[2]).text().trim(),
-            date: $($td[0]).text().trim(),
-            size: $($td[$td.length - 2]).html().replace('&#xA0;', ' '),
-            url: HOST + $($links[2]).attr('href'),
-            magnet: $($links[0]).attr('href'),
-            torrent: $($links[1]).attr('href'),
-            seeds: parseInt($peers.find('.green').text().trim()),
-            leaches: parseInt($peers.find('.red').text().trim())
-        };
-    }).get();
-};
